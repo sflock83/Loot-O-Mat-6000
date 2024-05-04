@@ -152,6 +152,7 @@ def send_notification(attachment: str = None, capacity: int = None) -> None:
             "message": message,
         },
         files={"attachment": ("image.png", open(attachment, "rb"), "image/png")},
+        timeout=15
     )
     print(r.text)
 
@@ -192,4 +193,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    send_notification("Epic Item")
+    main()
