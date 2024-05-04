@@ -1,17 +1,15 @@
-import os
-import time
-import pyautogui
-import pydirectinput
-import requests
-
 """
 This script automates the process of looting legendary items in the game Enshrouded.
 
-The script uses the pyautogui, pydirectinput, and requests libraries.
+The script uses the pyautogui, pydirectinput, requests, and pyperclip libraries.
 
 The script locates an image on the screen, 
 verifies if the loot on the screen matches an item in the loot list,
 and moves the character forward and interacts with a chest.
+
+The script also includes functions to reload the game and navigate through the main menu,
+perform OCR (Optical Character Recognition) on an image,
+and send a notification to the user using the pushover.net API.
 
 The script is not currently used in the main script.
 
@@ -21,20 +19,27 @@ Example:
     $ python main.py
 
 """
+import os
+import subprocess
+import time
+
+import pyautogui
+import pydirectinput
+import requests
+import pyperclip
 
 
-
-def locate_image(image_path: str, region: tuple[int, int, int, int] | None = None) -> tuple[bool, tuple[int, int] | None]:
+def locate_image(image_path, region=tuple(int, int, int, int) | None):
     """
     Locates an image on the screen.
 
     Args:
         image_path (str): The path to the image file.
-        region (tuple[int, int, int, int] | None):
-            The region of the screen to search for the image. Defaults to None.
+        region (tuple(int, int, int, int) | None):
+        The region of the screen to search for the image. Defaults to None.
 
     Returns:
-        tuple[bool, tuple[int, int] | None]:
+        tuple[bool, tuple(int, int) | None]:
         A tuple containing a boolean indicating if the image was found and the location of the image.
     """
     screen_width, screen_height = pyautogui.size()
@@ -42,14 +47,14 @@ def locate_image(image_path: str, region: tuple[int, int, int, int] | None = Non
     try:
         location = pyautogui.locateOnScreen(image_path, confidence=0.7, region=region)
         location = pyautogui.center(location)
-        img_found = True
+        imgFound = True
     except Exception:
-        img_found = False
+        imgFound = False
         location = None
-    return img_found, location
+    return imgFound, location
 
 
-def verify_loot() -> tuple[bool, str | None]:
+def verify_loot():
     """
     Verifies if the loot on the screen matches an item in the loot list.
 
@@ -65,7 +70,7 @@ def verify_loot() -> tuple[bool, str | None]:
     return False, None
 
 
-def move_character() -> int:
+def move_character():
     """
     Moves the character forward and interacts with a chest.
 
@@ -78,8 +83,8 @@ def move_character() -> int:
     pydirectinput.keyUp("w")
     pydirectinput.press("e")
     time.sleep(0.5)
-    img_found, _ = locate_image("./images/Loot_Legendary.png")
-    if img_found:
+    imgFound, _ = locate_image("./images/Loot_Legendary.png")
+    if imgFound:
         print("Looted a legendary item.")
         pydirectinput.press("f")
         return 1
@@ -88,51 +93,77 @@ def move_character() -> int:
         return 0
 
 
-def reload_game() -> None:
+def Reload_Game():
     """
     Reloads the game and navigates through the main menu.
 
     This function is not currently used in the main script.
     """
     print("Reload Game...")
-    img_return_to_main_menu = "./images/1_Return_To_Main_Menu.png"
-    img_play = "./images/2_Play_Game.png"
-    img_private = "./images/3_Private.png"
-    img_play_save = "./images/5_Play_Save.png"
-    img_list = [img_return_to_main_menu, img_play, img_private, img_play_save]
-    img_selected = 0
+    imgReturnToMainMenu = "./images/1_Return_To_Main_Menu.png"
+    imgPlay = "./images/2_Play_Game.png"
+    imgPrivate = "./images/3_Private.png"
+    imgPlaySave = "./images/5_Play_Save.png"
+    imgList = [imgReturnToMainMenu, imgPlay, imgPrivate, imgPlaySave]
+    imgSelected = 0
     repeat = True
-    emergency_exit = 0
+    emergencyExit = 0
     time.sleep(0.25)
     pydirectinput.press("esc")
     while repeat:
-        emergency_exit += 1
-        if emergency_exit > 15:
+        emergencyExit += 1
+        if emergencyExit > 15:
             print("Emergency Exit: Exiting the script")
             repeat = False
-        img_found, location = locate_image(img_list[img_selected])
-        if img_found:
+        imgFound, location = locate_image(imgList[imgSelected])
+        if imgFound:
             pyautogui.moveTo(location, duration=0.15)
             time.sleep(0.5)
             pyautogui.click(button="left")
             time.sleep(0.5)
-            img_selected += 1
-            if img_selected == len(img_list):
+            imgSelected += 1
+            if imgSelected == len(imgList):
                 repeat = False
-    img_found = False
-    while not img_found:
-        emergency_exit += 1
+    imgFound = False
+    while not imgFound:
+        emergencyExit += 1
         time.sleep(1)
-        img_found, location = locate_image("./images/6_Healthbar.png")
-        if img_found:
+        imgFound, location = locate_image("./images/6_Healthbar.png")
+        if imgFound:
             break
-        if emergency_exit > 15:
+        if emergencyExit > 15:
             print("Emergency Exit: Exiting the script")
-            img_found = True
+            imgFound = True
             break
 
 
-def send_notification(attachment: str = None, capacity: int = None) -> None:
+def ocr(image):
+    """
+    Performs OCR (Optical Character Recognition) on an image.
+
+    This function is not currently used in the main script.
+
+    Args:
+        image (str): The path to the image file.
+    """
+    if ".png" in image:
+        image = '"' + abspath(image) + '"'
+        ofname = image.replace(".png", "")
+        cmd = (
+            "C:\\Program Files\\Tesseract-OCR\\tesseract.exe "
+            + image
+            + " "
+            + ofname
+            + " -c page_separator="
+            " --psm 4 -l eng txt"
+        )
+        rc = subprocess.run(cmd, shell=True).returncode
+        txtfname = ofname.strip('"') + ".txt"
+        with open(txtfname, "rt", encoding="utf-8-sig", errors="ignore") as txtfile:
+            pyperclip.copy(txtfile.read())
+
+
+def send_notification(attachment=None, capacity=None):
     """
     Sends a notification to the user using pushover.net API.
 
@@ -156,7 +187,7 @@ def send_notification(attachment: str = None, capacity: int = None) -> None:
     print(r.text)
 
 
-def main() -> None:
+def main():
     """
     The main function of the script.
 
@@ -166,12 +197,12 @@ def main() -> None:
         print("No items in the loot list. Exiting the script.")
         exit(0)
     pyautogui.FAILSAFE = True
-    found_items = 0
+    foundItems = 0
     while True:
-        inventory_space = input("Enter the current inventory space: ")
+        inventorySpace = input("Enter the current inventory space: ")
         try:
-            inventory_space = int(inventory_space)
-            if 1 <= inventory_space <= 48:
+            inventorySpace = int(inventorySpace)
+            if 1 <= inventorySpace <= 48:
                 break
             else:
                 print("Invalid input. Please enter a number between 1 and 48.")
@@ -180,13 +211,13 @@ def main() -> None:
     for i in range(5, 0, -1):
         print(f"Waiting for {i} seconds")
         time.sleep(1)
-    while found_items < inventory_space:
+    while foundItems < inventorySpace:
         print(f"Starting loop {i+1}")
-        reload_game()
-        found_items += move_character()
+        Reload_Game()
+        foundItems += move_character()
         print(f"Ending loop {i+1}")
         print("Exiting the script.")
-    if found_items > 0:
+    if foundItems > 0:
         print("Found a legendary item.")
     exit(0)
 
